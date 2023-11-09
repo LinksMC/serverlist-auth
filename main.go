@@ -4,12 +4,15 @@ import (
 	"log/slog"
 
 	"github.com/LinksMC/serverlist-auth/data"
+	"github.com/joho/godotenv"
 	"github.com/sandertv/gophertunnel/minecraft"
 )
 
 func main() {
-	slog.Info("サーバーを起動します...")
+	// .envを読み込む
+	loadEnv()
 	// サーバー起動
+	slog.Info("サーバーを起動します...")
 	listener, err := getConfig().Listen("raknet", "0.0.0.0:19132")
 	if err != nil {
 		panic(err)
@@ -36,6 +39,7 @@ func handleConn(conn *minecraft.Conn, listener *minecraft.Listener) {
 	listener.Disconnect(conn, "connection lost")
 }
 
+// サーバー設定読み込み
 func getConfig() minecraft.ListenConfig {
 	config := minecraft.ListenConfig{
 		AuthenticationDisabled: false,
@@ -43,4 +47,12 @@ func getConfig() minecraft.ListenConfig {
 		StatusProvider:         minecraft.NewStatusProvider("[LinksMC]認証サーバー"),
 	}
 	return config
+}
+
+// .envを読み込む
+func loadEnv() {
+	err := godotenv.Load(".env")
+	if err != nil {
+		slog.Warn("読み込み出来ませんでした: %v", err)
+	}
 }
