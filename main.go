@@ -9,11 +9,13 @@ import (
 
 func main() {
 	slog.Info("サーバーを起動します...")
-	listener, err := minecraft.ListenConfig{}.Listen("raknet", "0.0.0.0:19132")
+	// サーバー起動
+	listener, err := getConfig().Listen("raknet", "0.0.0.0:19132")
 	if err != nil {
 		panic(err)
 	}
 	defer listener.Close()
+	slog.Info("サーバーを起動しました")
 	for {
 		c, err := listener.Accept()
 		if err != nil {
@@ -32,4 +34,13 @@ func handleConn(conn *minecraft.Conn, listener *minecraft.Listener) {
 	// TODO: DB操作
 	// クライアントの接続を切断
 	listener.Disconnect(conn, "connection lost")
+}
+
+func getConfig() minecraft.ListenConfig {
+	config := minecraft.ListenConfig{
+		AuthenticationDisabled: false,
+		MaximumPlayers:         100,
+		StatusProvider:         minecraft.NewStatusProvider("[LinksMC]認証サーバー"),
+	}
+	return config
 }
