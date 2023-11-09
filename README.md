@@ -1,2 +1,2 @@
 # serverlist-auth
-LinksMCでのMinecraftアカウント認証サーバーです。
+LinksMCのMinecraftアカウント認証サーバーです。
