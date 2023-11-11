@@ -3,7 +3,9 @@ package main
 import (
 	"context"
 	"log/slog"
+	"strings"
 
+	"github.com/LinksMC/serverlist-auth/config"
 	"github.com/LinksMC/serverlist-auth/data"
 	"github.com/LinksMC/serverlist-auth/gen"
 	"github.com/LinksMC/serverlist-auth/prisma/db"
@@ -14,6 +16,12 @@ import (
 func main() {
 	// .envを読み込む
 	loadEnv()
+
+	//設定読み込み
+	_config, err := config.GetConfig()
+	if err != nil {
+		panic(err)
+	}
 
 	// DB接続
 	slog.Info("DBに接続します...")
@@ -30,30 +38,35 @@ func main() {
 
 	// サーバー起動
 	slog.Info("サーバーを起動します...")
-	listener, err := getConfig().Listen("raknet", "0.0.0.0:19132")
+	serverConfig := minecraft.ListenConfig{
+		AuthenticationDisabled: false,
+		MaximumPlayers:         _config.Minecraft.MaxPlayers,
+		StatusProvider:         minecraft.NewStatusProvider(_config.Minecraft.Motd),
+	}
+	listener, err := serverConfig.Listen("raknet", _config.Minecraft.Address)
 	if err != nil {
 		panic(err)
 	}
 	defer listener.Close()
-	slog.Info("サーバーを起動しました")
+	slog.Info("サーバーを起動しました", "Address", _config.Minecraft.Address)
 	for {
 		c, err := listener.Accept()
 		if err != nil {
 			panic(err)
 		}
-		go handleConn(c.(*minecraft.Conn), listener, prisma)
+		go handleConn(c.(*minecraft.Conn), listener, prisma, _config)
 	}
 }
 
 // クライアントの接続を処理
-func handleConn(conn *minecraft.Conn, listener *minecraft.Listener, prisma *db.PrismaClient) {
+func handleConn(conn *minecraft.Conn, listener *minecraft.Listener, prisma *db.PrismaClient, _config config.Config) {
 	// 接続情報取得
 	identity := conn.IdentityData()
 	clientData := conn.ClientData()
 	slog.Info("クライアントが接続しました", "Name", identity.DisplayName, "XUID", identity.XUID, "OS", data.GetDeviceOSName(clientData.DeviceOS), "IP", conn.RemoteAddr().String())
 
 	// トークン保存 / 更新
-	token := gen.CreateToken()
+	token := gen.CreateToken(_config.Internal.TokenLength)
 	request, err := prisma.MinecraftAuthRequest.UpsertOne(
 		db.MinecraftAuthRequest.EditionMcid(
 			db.MinecraftAuthRequest.Edition.Equals("bedrock"),
@@ -74,17 +87,7 @@ func handleConn(conn *minecraft.Conn, listener *minecraft.Listener, prisma *db.P
 	}
 
 	// クライアントの接続を切断
-	listener.Disconnect(conn, "以下のコードを入力してください!\n"+request.Token)
-}
-
-// サーバー設定読み込み
-func getConfig() minecraft.ListenConfig {
-	config := minecraft.ListenConfig{
-		AuthenticationDisabled: false,
-		MaximumPlayers:         100,
-		StatusProvider:         minecraft.NewStatusProvider("[LinksMC]認証サーバー"),
-	}
-	return config
+	listener.Disconnect(conn, strings.Replace(_config.Minecraft.Message, "[TOKEN]", request.Token, -1))
 }
 
 // .envを読み込む
