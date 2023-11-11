@@ -4,6 +4,7 @@ import (
 	"log/slog"
 
 	"github.com/LinksMC/serverlist-auth/data"
+	"github.com/LinksMC/serverlist-auth/prisma/db"
 	"github.com/joho/godotenv"
 	"github.com/sandertv/gophertunnel/minecraft"
 )
@@ -11,6 +12,17 @@ import (
 func main() {
 	// .envを読み込む
 	loadEnv()
+	// DB接続
+	slog.Info("DBに接続します...")
+	client := db.NewClient()
+	if err := client.Prisma.Connect(); err != nil {
+		panic(err)
+	}
+	defer func() {
+		if err := client.Prisma.Disconnect(); err != nil {
+			panic(err)
+		}
+	}()
 	// サーバー起動
 	slog.Info("サーバーを起動します...")
 	listener, err := getConfig().Listen("raknet", "0.0.0.0:19132")
@@ -35,6 +47,7 @@ func handleConn(conn *minecraft.Conn, listener *minecraft.Listener) {
 	clientData := conn.ClientData()
 	slog.Info("クライアントが接続しました", "Name", indetity.DisplayName, "XUID", indetity.XUID, "OS", data.GetDeviceOSName(clientData.DeviceOS))
 	// TODO: DB操作
+
 	// クライアントの接続を切断
 	listener.Disconnect(conn, "connection lost")
 }
