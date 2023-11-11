@@ -3,7 +3,6 @@ package config
 import (
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"os"
 
 	"github.com/creasty/defaults"
@@ -23,15 +22,6 @@ type InternalServerParams struct {
 type Config struct {
 	Minecraft MinecraftServerParams `json:"minecraft"`
 	Internal  InternalServerParams  `json:"internal"`
-}
-
-func CreateFile() {
-	_config := &Config{}
-	if err := defaults.Set(_config); err != nil {
-		panic(err)
-	}
-	file, _ := json.MarshalIndent(_config, "", " ")
-	_ = ioutil.WriteFile("settings.json", file, 0644)
 }
 
 func GetConfig() (Config, error) {
