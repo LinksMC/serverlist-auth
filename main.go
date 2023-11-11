@@ -14,15 +14,16 @@ func main() {
 	loadEnv()
 	// DB接続
 	slog.Info("DBに接続します...")
-	client := db.NewClient()
-	if err := client.Prisma.Connect(); err != nil {
+	prisma := db.NewClient()
+	if err := prisma.Prisma.Connect(); err != nil {
 		panic(err)
 	}
 	defer func() {
-		if err := client.Prisma.Disconnect(); err != nil {
+		if err := prisma.Prisma.Disconnect(); err != nil {
 			panic(err)
 		}
 	}()
+	slog.Info("DBに接続しました...")
 	// サーバー起動
 	slog.Info("サーバーを起動します...")
 	listener, err := getConfig().Listen("raknet", "0.0.0.0:19132")
@@ -45,7 +46,7 @@ func handleConn(conn *minecraft.Conn, listener *minecraft.Listener) {
 	// 接続情報取得
 	indetity := conn.IdentityData()
 	clientData := conn.ClientData()
-	slog.Info("クライアントが接続しました", "Name", indetity.DisplayName, "XUID", indetity.XUID, "OS", data.GetDeviceOSName(clientData.DeviceOS))
+	slog.Info("クライアントが接続しました", "Name", indetity.DisplayName, "XUID", indetity.XUID, "OS", data.GetDeviceOSName(clientData.DeviceOS), "IP", conn.RemoteAddr().String())
 	// TODO: DB操作
 
 	// クライアントの接続を切断
