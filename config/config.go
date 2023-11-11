@@ -12,7 +12,7 @@ import (
 type MinecraftServerParams struct {
 	Address    string `json:"address" default:"0.0.0.0:19132"`
 	Motd       string `json:"motd" default:"[LinksMC]認証サーバー"`
-	MaxPlayers string `json:"max_players" default:"100"`
+	MaxPlayers int    `json:"max_players" default:"100"`
 	Message    string `json:"message" default:"以下のコードを入力してください!\n[TOKEN]"`
 }
 

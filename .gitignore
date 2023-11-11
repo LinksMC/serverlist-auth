@@ -27,3 +27,5 @@ go.work
 .env
 
 node_modules
+
+config.json
