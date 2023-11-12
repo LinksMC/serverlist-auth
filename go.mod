@@ -3,6 +3,7 @@ module github.com/LinksMC/serverlist-auth
 go 1.21.4
 
 require (
+	github.com/bluele/gcache v0.0.2 // indirect
 	github.com/creasty/defaults v1.7.0 // indirect
 	github.com/df-mc/atomic v1.10.0 // indirect
 	github.com/go-gl/mathgl v1.0.0 // indirect

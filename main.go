@@ -4,11 +4,13 @@ import (
 	"context"
 	"log/slog"
 	"strings"
+	"time"
 
 	"github.com/LinksMC/serverlist-auth/config"
 	"github.com/LinksMC/serverlist-auth/data"
 	"github.com/LinksMC/serverlist-auth/gen"
 	"github.com/LinksMC/serverlist-auth/prisma/db"
+	"github.com/bluele/gcache"
 	"github.com/joho/godotenv"
 	"github.com/sandertv/gophertunnel/minecraft"
 )
@@ -22,6 +24,12 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
+
+	// キャッシュ作成
+ 	gc := gcache.New(_config.Internal.CacheSize).
+	Expiration(time.Second*time.Duration(_config.Internal.CacheTime)).
+	LRU().
+	Build()
 
 	// DB接続
 	slog.Info("DBに接続します...")
@@ -54,12 +62,12 @@ func main() {
 		if err != nil {
 			panic(err)
 		}
-		go handleConn(c.(*minecraft.Conn), listener, prisma, _config)
+		go handleConn(c.(*minecraft.Conn), listener, prisma, _config, &gc)
 	}
 }
 
 // クライアントの接続を処理
-func handleConn(conn *minecraft.Conn, listener *minecraft.Listener, prisma *db.PrismaClient, _config config.Config) {
+func handleConn(conn *minecraft.Conn, listener *minecraft.Listener, prisma *db.PrismaClient, _config config.Config, gc *gcache.Cache) {
 	// 接続情報取得
 	identity := conn.IdentityData()
 	clientData := conn.ClientData()
