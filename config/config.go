@@ -17,7 +17,7 @@ type MinecraftServerParams struct {
 
 type InternalServerParams struct {
 	TokenLength int `json:"token_length" default:"8"`
-	CacheTime   int `json:"cache_time" default:"5"`
+	CacheTime   int `json:"cache_time" default:"60"`
 	CacheSize   int `json:"cache_size" default:"100"`
 }
 

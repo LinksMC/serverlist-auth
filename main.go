@@ -73,29 +73,40 @@ func handleConn(conn *minecraft.Conn, listener *minecraft.Listener, prisma *db.P
 	clientData := conn.ClientData()
 	slog.Info("クライアントが接続しました", "Name", identity.DisplayName, "XUID", identity.XUID, "OS", data.GetDeviceOSName(clientData.DeviceOS), "IP", conn.RemoteAddr().String())
 
-	// トークン保存 / 更新
-	token := gen.CreateToken(_config.Internal.TokenLength)
-	request, err := prisma.MinecraftAuthRequest.UpsertOne(
-		db.MinecraftAuthRequest.EditionMcid(
-			db.MinecraftAuthRequest.Edition.Equals("bedrock"),
-			db.MinecraftAuthRequest.Mcid.Equals(identity.XUID),
-		),
-	).Create(
-		db.MinecraftAuthRequest.Edition.Set("bedrock"),
-		db.MinecraftAuthRequest.Name.Set(identity.DisplayName),
-		db.MinecraftAuthRequest.Mcid.Set(identity.XUID),
-		db.MinecraftAuthRequest.Token.Set(token),
-	).Update(
-		db.MinecraftAuthRequest.Edition.Set("bedrock"),
-		db.MinecraftAuthRequest.Name.Set(identity.DisplayName),
-		db.MinecraftAuthRequest.Token.Set(token),
-	).Exec(context.Background())
+	// キャッシュからトークン取得
+	key := conn.RemoteAddr().String()
+	token := ""
+	tokenRaw, err := (*gc).Get(key)
 	if err != nil {
-		slog.Error("トークンの保存 / 更新に失敗しました", "Error", err)
+		// トークン新規作成・保存
+		token = gen.CreateToken(_config.Internal.TokenLength)
+		_, err := prisma.MinecraftAuthRequest.UpsertOne(
+			db.MinecraftAuthRequest.EditionMcid(
+				db.MinecraftAuthRequest.Edition.Equals("bedrock"),
+				db.MinecraftAuthRequest.Mcid.Equals(identity.XUID),
+			),
+		).Create(
+			db.MinecraftAuthRequest.Edition.Set("bedrock"),
+			db.MinecraftAuthRequest.Name.Set(identity.DisplayName),
+			db.MinecraftAuthRequest.Mcid.Set(identity.XUID),
+			db.MinecraftAuthRequest.Token.Set(token),
+		).Update(
+			db.MinecraftAuthRequest.Name.Set(identity.DisplayName),
+			db.MinecraftAuthRequest.Token.Set(token),
+		).Exec(context.Background())
+		if err != nil {
+			slog.Error("トークンの保存 / 更新に失敗しました", "Error", err)
+			listener.Disconnect(conn, "認証コードの作成に失敗しました")
+			return
+		}
+		// キャッシュに保存
+		(*gc).Set(key, token)
+	}else{
+		token = tokenRaw.(string)
 	}
 
 	// クライアントの接続を切断
-	listener.Disconnect(conn, strings.Replace(_config.Minecraft.Message, "[TOKEN]", request.Token, -1))
+	listener.Disconnect(conn, strings.Replace(_config.Minecraft.Message, "[TOKEN]", token, -1))
 }
 
 // .envを読み込む
